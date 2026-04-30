@@ -5,40 +5,136 @@ on:
     - cron: '0 7 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
 
-      - name: Générer les news IA
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Installer les dépendances
+        run: pip install requests beautifulsoup4
+
+      - name: Scraper les news et générer le HTML
         run: |
-          curl -X POST https://api.anthropic.com/v1/messages \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
-            -H "content-type: application/json" \
-            -d '{
-              "model": "claude-sonnet-4-20250514",
-              "max_tokens": 4000,
-              "messages": [{
-                "role": "user",
-                "content": "Génère une page HTML complète de veille IA avec les 9 actualités les plus importantes du jour. Style journal de presse, fond beige #F5F2EC, header noir, accent rouge #C8401A. Inclus : header avec titre Veille IA, 4 chiffres clés, 9 news avec catégorie colorée, 4 tendances, footer. CSS inline complet, responsive. Réponds UNIQUEMENT avec le code HTML complet, rien d autre."
-              }]
-            }' | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          html = data['content'][0]['text']
-          with open('index.html', 'w') as f:
-              f.write(html)
-          print('index.html généré !')
-          "
+          python3 << 'PYEOF'
+          import requests
+          from bs4 import BeautifulSoup
+          from datetime import datetime
+          import json, re
+
+          headers = {"User-Agent": "Mozilla/5.0"}
+          news = []
+
+          # Source 1 — lebigdata.fr
+          try:
+            r = requests.get("https://www.lebigdata.fr/intelligence-artificielle", headers=headers, timeout=10)
+            soup = BeautifulSoup(r.text, "html.parser")
+            for art in soup.select("article")[:4]:
+              t = art.select_one("h2,h3")
+              p = art.select_one("p")
+              if t and len(t.text.strip()) > 10:
+                news.append({"cat": "Modèles IA", "color": "#C8401A", "title": t.text.strip()[:100], "summary": p.text.strip()[:200] if p else "Actualité intelligence artificielle.", "source": "lebigdata.fr"})
+          except: pass
+
+          # Source 2 — blogdumoderateur.com
+          try:
+            r = requests.get("https://www.blogdumoderateur.com/intelligence-artificielle/", headers=headers, timeout=10)
+            soup = BeautifulSoup(r.text, "html.parser")
+            for art in soup.select("article")[:3]:
+              t = art.select_one("h2,h3")
+              p = art.select_one("p")
+              if t and len(t.text.strip()) > 10:
+                news.append({"cat": "Entreprise", "color": "#B07A00", "title": t.text.strip()[:100], "summary": p.text.strip()[:200] if p else "Actualité intelligence artificielle.", "source": "blogdumoderateur.com"})
+          except: pass
+
+          # Source 3 — numerama.com
+          try:
+            r = requests.get("https://www.numerama.com/tag/intelligence-artificielle/", headers=headers, timeout=10)
+            soup = BeautifulSoup(r.text, "html.parser")
+            for art in soup.select("article")[:2]:
+              t = art.select_one("h2,h3")
+              p = art.select_one("p")
+              if t and len(t.text.strip()) > 10:
+                news.append({"cat": "Réglementation", "color": "#1E7A4A", "title": t.text.strip()[:100], "summary": p.text.strip()[:200] if p else "Actualité intelligence artificielle.", "source": "numerama.com"})
+          except: pass
+
+          # Fallback si pas assez de news
+          while len(news) < 9:
+            news.append({"cat": "IA Générale", "color": "#2B4DA8", "title": f"Veille IA du {datetime.now().strftime('%d/%m/%Y')}", "summary": "Retrouvez les dernières actualités sur l'intelligence artificielle.", "source": "veille-ia.fr"})
+
+          news = news[:9]
+          today = datetime.now().strftime("%d %B %Y")
+          week_start = datetime.now().strftime("%d %B")
+
+          html = f"""<!DOCTYPE html>
+          <html lang="fr">
+          <head>
+            <meta charset="UTF-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <title>Veille IA</title>
+            <style>
+              *{{box-sizing:border-box;margin:0;padding:0}}
+              body{{background:#F5F2EC;color:#1A1714;font-family:Georgia,serif}}
+              .header{{background:#1A1714;color:#F5F2EC;padding:28px 5% 20px;text-align:center;border-bottom:4px solid #C8401A}}
+              .header-date{{font-size:11px;font-family:monospace;letter-spacing:.2em;text-transform:uppercase;color:#7A7570;margin-bottom:12px}}
+              .header-title{{font-size:clamp(36px,8vw,80px);font-weight:900;font-style:italic;line-height:1;margin-bottom:12px}}
+              .header-title span{{color:#C8401A}}
+              .header-sub{{font-size:11px;font-family:monospace;letter-spacing:.16em;text-transform:uppercase;color:#7A7570}}
+              .highlight{{background:#C8401A;color:#F5F2EC;padding:18px 5%}}
+              .highlight-label{{font-size:10px;font-family:monospace;letter-spacing:.2em;text-transform:uppercase;opacity:.85;margin-bottom:6px}}
+              .highlight-text{{font-size:clamp(14px,2.5vw,20px);font-style:italic;font-weight:700;line-height:1.4}}
+              .stat{{width:100%;padding:14px 5%;border-bottom:1px solid #D8D3CB;background:#FDFAF5}}
+              .stat-num{{font-style:italic;font-weight:900;font-size:clamp(22px,5vw,32px);color:#C8401A;margin-right:10px}}
+              .stat-label{{font-family:monospace;font-size:clamp(10px,2vw,12px);text-transform:uppercase;letter-spacing:.1em;color:#7A7570}}
+              .section-title{{background:#1A1714;color:#F5F2EC;padding:10px 5%;text-align:center}}
+              .section-title span{{font-family:monospace;font-size:10px;letter-spacing:.3em;text-transform:uppercase}}
+              .news-item{{width:100%;padding:18px 5%;border-bottom:1px solid #D8D3CB}}
+              .news-item:nth-child(odd){{background:#F5F2EC}}
+              .news-item:nth-child(even){{background:#FDFAF5}}
+              .news-cat{{font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:2px 6px;border:1px solid;display:inline-block;margin-bottom:8px}}
+              .news-num{{font-family:monospace;font-size:10px;color:#D8D3CB;margin:6px 0 0}}
+              .news-title{{font-size:clamp(14px,3vw,18px);font-weight:700;line-height:1.3;margin:4px 0 8px}}
+              .news-summary{{font-size:clamp(12px,2vw,14px);line-height:1.7;color:#4A4540;margin-bottom:8px}}
+              .news-source{{font-family:monospace;font-size:10px;color:#7A7570;text-transform:uppercase}}
+              .footer{{background:#1A1714;color:#7A7570;padding:14px 5%;text-align:center;font-family:monospace;font-size:10px;letter-spacing:.06em}}
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <p class="header-date">Mis à jour le {today}</p>
+              <p class="header-title">Veille <span>IA</span></p>
+              <p class="header-sub">L'essentiel de l'intelligence artificielle</p>
+            </div>
+            <div class="highlight">
+              <p class="highlight-label">Tendance de la semaine</p>
+              <p class="highlight-text">"L'IA agentique s'industrialise — les projets pilotes deviennent des déploiements réels en 2026."</p>
+            </div>
+            <div class="section-title"><span>Toutes les actualités</span></div>
+            {"".join([f'''<div class="news-item">
+              <span class="news-cat" style="border-color:{n["color"]};color:{n["color"]};">{n["cat"]}</span>
+              <p class="news-num">{str(i+1).zfill(2)}</p>
+              <p class="news-title">{n["title"]}</p>
+              <p class="news-summary">{n["summary"]}</p>
+              <p class="news-source">— {n["source"]}</p>
+            </div>''' for i,n in enumerate(news)])}
+            <div class="footer">Veille IA · Mis à jour le {today} · {len(news)} actualités</div>
+          </body>
+          </html>"""
+
+          with open("index.html", "w", encoding="utf-8") as f:
+            f.write(html)
+          print(f"index.html généré avec {len(news)} articles !")
+          PYEOF
 
       - name: Commit et push
         run: |
-          git config user.name "GitHub Actions"
+          git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add index.html
-          git commit -m "Veille IA du $(date +%d/%m/%Y)" || echo "Pas de changement"
+          git diff --cached --quiet || git commit -m "Veille IA - $(date +'%d/%m/%Y')"
           git push
