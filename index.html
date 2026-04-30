@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Veille IA</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #F5F2EC; color: #1A1714; font-family: Georgia, serif; }
+    .header { background: #1A1714; color: #F5F2EC; padding: 28px 5% 20px; text-align: center; border-bottom: 4px solid #C8401A; }
+    .header-date { font-size: 11px; font-family: monospace; letter-spacing: 0.2em; text-transform: uppercase; color: #7A7570; margin-bottom: 12px; }
+    .header-title { font-size: clamp(36px, 8vw, 80px); font-weight: 900; font-style: italic; line-height: 1; margin-bottom: 12px; }
+    .header-title span { color: #C8401A; }
+    .header-sub { font-size: 11px; font-family: monospace; letter-spacing: 0.16em; text-transform: uppercase; color: #7A7570; }
+    .highlight { background: #C8401A; color: #F5F2EC; padding: 18px 5%; }
+    .highlight-label { font-size: 10px; font-family: monospace; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.85; margin-bottom: 6px; }
+    .highlight-text { font-size: clamp(14px, 2.5vw, 20px); font-style: italic; font-weight: 700; line-height: 1.4; }
+    .stat { width: 100%; padding: 14px 5%; border-bottom: 1px solid #D8D3CB; background: #FDFAF5; }
+    .stat-num { font-style: italic; font-weight: 900; font-size: clamp(22px, 5vw, 32px); color: #C8401A; margin-right: 10px; }
+    .stat-label { font-family: monospace; font-size: clamp(10px, 2vw, 12px); text-transform: uppercase; letter-spacing: 0.1em; color: #7A7570; }
+    .section-title { background: #1A1714; color: #F5F2EC; padding: 10px 5%; text-align: center; }
+    .section-title span { font-family: monospace; font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; }
+    .news-item { width: 100%; padding: 18px 5%; border-bottom: 1px solid #D8D3CB; }
+    .news-item:nth-child(odd) { background: #F5F2EC; }
+    .news-item:nth-child(even) { background: #FDFAF5; }
+    .news-cat { font-family: monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; padding: 2px 6px; border: 1px solid; display: inline-block; margin-bottom: 8px; }
+    .news-num { font-family: monospace; font-size: 10px; color: #D8D3CB; margin: 6px 0 0; }
+    .news-title { font-size: clamp(14px, 3vw, 18px); font-weight: 700; line-height: 1.3; margin: 4px 0 8px; }
+    .news-summary { font-size: clamp(12px, 2vw, 14px); line-height: 1.7; color: #4A4540; margin-bottom: 8px; }
+    .news-source { font-family: monospace; font-size: 10px; color: #7A7570; text-transform: uppercase; }
+    .trend-item { width: 100%; padding: 16px 5%; border-bottom: 1px solid #D8D3CB; background: #F5F2EC; }
+    .trend-title { font-size: clamp(13px, 2.5vw, 15px); font-weight: 700; color: #C8401A; margin-bottom: 4px; }
+    .trend-desc { font-size: clamp(12px, 2vw, 13px); line-height: 1.6; color: #4A4540; }
+    .footer { background: #1A1714; color: #7A7570; padding: 14px 5%; text-align: center; font-family: monospace; font-size: 10px; letter-spacing: 0.06em; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const DATA = {
+      date: "Semaine du 28 avril — 4 mai 2026",
+      tendance: "Avril 2026 marque le basculement définitif vers l'IA agentique — les projets pilotes deviennent des déploiements industriels.",
+      stats: [
+        { num: "Top 4", label: "Claude d'Anthropic dans le classement LMArena mondial" },
+        { num: "97M", label: "Installations du protocole MCP en mars 2026" },
+        { num: "<30%", label: "PME européennes prêtes pour l'AI Act (échéance 2 août)" },
+        { num: "+60%", label: "Hausse des offres d'emploi IA en France en 2026" }
+      ],
+      news: [
+        { cat: "Modèles IA", color: "#C8401A", title: "Claude d'Anthropic écrase la concurrence — top 4 mondial LMArena", summary: "En avril 2026, les modèles Claude trustent les 4 premières places du classement LMArena mondial. OpenAI n'apparaît qu'en 9e position. Anthropic domine la génération de texte, le développement web et l'analyse d'image.", source: "blogdumoderateur.com" },
+        { cat: "Modèles IA", color: "#C8401A", title: "DeepSeek-V4 : 1 million de tokens, fonctionne sur puces Huawei", summary: "Lancé le 24 avril 2026, DeepSeek-V4 est multimodal et économique. Il contourne les restrictions Nvidia en fonctionnant sur puces Huawei, avec un contexte d'un million de caractères au prix le plus bas du marché.", source: "france24.com" },
+        { cat: "Cybersécurité", color: "#8B2FA8", title: "Accès non autorisé au modèle secret Mythos d'Anthropic", summary: "Anthropic a ouvert une enquête sur un accès non autorisé à Mythos, un modèle capable de détecter des failles critiques jamais diffusé au public. Des utilisateurs Discord y auraient accédé sans autorisation selon Wired.", source: "business-ia.com" },
+        { cat: "Modèles IA", color: "#C8401A", title: "MCP d'Anthropic adopté par tous, confié à la Linux Foundation", summary: "Le protocole MCP, adopté par OpenAI, Microsoft et Google, a été confié à la Linux Foundation. Ce standard universel pour les agents IA dépasse désormais 97 millions d'installations.", source: "ia-info.fr" },
+        { cat: "Géopolitique", color: "#2B4DA8", title: "Classement Time 2026 : Alibaba et ByteDance au sommet mondial", summary: "Time publie pour la première fois son top 10 des entreprises IA. Trois entreprises chinoises y figurent. La famille Qwen d'Alibaba dépasse 1 milliard de téléchargements.", source: "servicesmobiles.fr" },
+        { cat: "Géopolitique", color: "#2B4DA8", title: "Procès Musk vs OpenAI : qui possède l'AGI ?", summary: "Ouvert le 27 avril 2026, le procès entre Elon Musk et OpenAI porte sur qui possède légitimement le droit de commercialiser l'Intelligence Artificielle Générale. La décision pourrait remodeler toute l'industrie.", source: "lebigdata.fr" },
+        { cat: "Réglementation", color: "#1E7A4A", title: "EU AI Act : moins de 30% des PME européennes sont prêtes", summary: "À moins de 4 mois de l'échéance du 2 août 2026, les obligations de l'AI Act entrent en phase critique. Moins de 30% des PME ont entamé une démarche de conformité. La CNIL intensifiera ses contrôles à l'automne.", source: "ia-info.fr" },
+        { cat: "Entreprise", color: "#B07A00", title: "Meta prépare 8 000 licenciements pour pivoter vers l'IA", summary: "Selon Reuters, Meta prévoit de licencier 10% de ses effectifs dès le 20 mai dans un pivot massif vers l'IA. Cette décision illustre la transformation profonde du marché du travail tech.", source: "lemondeinformatique.fr" },
+        { cat: "Recherche", color: "#1A6B7A", title: "Agent4Science : 150 agents IA publient des articles scientifiques", summary: "Depuis avril 2026, la plateforme Agent4Science permet à plus de 150 entités IA de publier et débattre sans intervention humaine. La plateforme sœur EinsteinArena (Stanford) a produit 11 solutions mathématiques inédites.", source: "france24.com" }
+      ],
+      tendances: [
+        { title: "IA agentique industrialisée", desc: "Les workflows agentiques quittent la phase pilote pour les pratiques quotidiennes. Seules 13% des entreprises françaises ont déployé l'IA agentique à grande échelle." },
+        { title: "Open source chinois en force", desc: "Alibaba, ByteDance et DeepSeek s'imposent à l'international via des modèles ouverts, contournant les restrictions américaines grâce aux alternatives Huawei." },
+        { title: "Réglementation en retard", desc: "L'AI Act européen arrive le 2 août 2026 et moins de 30% des PME sont prêtes. Les amendes peuvent atteindre 35 M€ ou 7% du chiffre d'affaires mondial." },
+        { title: "Restructurations massives", desc: "Les Big Tech licencient pour réinvestir dans l'IA. Les compétences IA explosent avec +60% d'offres d'emploi en France en 2026." }
+      ]
+    };
+
+    const root = document.getElementById("root");
+    root.innerHTML = `
+      <div class="header">
+        <p class="header-date">${DATA.date}</p>
+        <p class="header-title">Veille <span>IA</span></p>
+        <p class="header-sub">L'essentiel de l'intelligence artificielle</p>
+      </div>
+      <div class="highlight">
+        <p class="highlight-label">Tendance de la semaine</p>
+        <p class="highlight-text">"${DATA.tendance}"</p>
+      </div>
+      ${DATA.stats.map(s => `
+        <div class="stat">
+          <span class="stat-num">${s.num}</span>
+          <span class="stat-label">${s.label}</span>
+        </div>`).join("")}
+      <div class="section-title"><span>Toutes les actualités</span></div>
+      ${DATA.news.map((n, i) => `
+        <div class="news-item">
+          <span class="news-cat" style="border-color:${n.color};color:${n.color};">${n.cat}</span>
+          <p class="news-num">${String(i+1).padStart(2,"0")}</p>
+          <p class="news-title">${n.title}</p>
+          <p class="news-summary">${n.summary}</p>
+          <p class="news-source">— ${n.source}</p>
+        </div>`).join("")}
+      <div class="section-title"><span>Tendances de fond</span></div>
+      ${DATA.tendances.map(t => `
+        <div class="trend-item">
+          <p class="trend-title">↗ ${t.title}</p>
+          <p class="trend-desc">${t.desc}</p>
+        </div>`).join("")}
+      <div class="footer">Veille IA · ${DATA.date} · 9 actualités · Mis à jour par Claude</div>
+    `;
+  </script>
+</body>
+</html>
