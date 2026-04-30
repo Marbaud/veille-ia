@@ -1,0 +1,44 @@
+name: Mise à jour Veille IA
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Générer les news IA
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          curl -X POST https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d '{
+              "model": "claude-sonnet-4-20250514",
+              "max_tokens": 4000,
+              "messages": [{
+                "role": "user",
+                "content": "Génère une page HTML complète de veille IA avec les 9 actualités les plus importantes du jour. Style journal de presse, fond beige #F5F2EC, header noir, accent rouge #C8401A. Inclus : header avec titre Veille IA, 4 chiffres clés, 9 news avec catégorie colorée, 4 tendances, footer. CSS inline complet, responsive. Réponds UNIQUEMENT avec le code HTML complet, rien d autre."
+              }]
+            }' | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          html = data['content'][0]['text']
+          with open('index.html', 'w') as f:
+              f.write(html)
+          print('index.html généré !')
+          "
+
+      - name: Commit et push
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add index.html
+          git commit -m "Veille IA du $(date +%d/%m/%Y)" || echo "Pas de changement"
+          git push
